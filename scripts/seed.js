@@ -1,4 +1,5 @@
-// Simple seed script (Node) for dev/demo
+// scripts/seed.js
+// Updated seed script - uses upsert/create (no createMany) to avoid client/schema mismatches.
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
@@ -26,20 +27,34 @@ async function main() {
     }
   });
 
-  await prisma.roleMapping.createMany({
-    data: [
-      {
+  // Ensure a RoleMapping exists (safe across DB backends)
+  const existingRole = await prisma.roleMapping.findFirst({
+    where: {
+      userId: user.id,
+      organizationId: org.id,
+      role: "director"
+    }
+  });
+
+  if (!existingRole) {
+    await prisma.roleMapping.create({
+      data: {
         userId: user.id,
         organizationId: org.id,
         role: "director"
       }
-    ],
-    skipDuplicates: true
-  });
+    });
+  }
 
   console.log("Seed done:", { orgId: org.id, directorId: user.id });
 }
 
 main()
-  .catch(e => { console.error(e); process.exit(1); })
-  .finally(() => process.exit());
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+    process.exit();
+  });
