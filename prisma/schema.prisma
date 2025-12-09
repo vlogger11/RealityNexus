@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  about     String?
+  verified  Boolean  @default(false)
+  plan      String? 
+  billingId String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  properties Property[]
+  users     RoleMapping[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String?
+  phone     String?  @unique
+  email     String?  @unique
+  type      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roles     RoleMapping[]
+  leads     Lead[]   @relation("userLeads")
+}
+
+model RoleMapping {
+  id             String   @id @default(uuid())
+  userId         String
+  organizationId String
+  role           String
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Property {
+  id                   String   @id @default(uuid())
+  organizationId       String
+  name                 String
+  address              String
+  lat                  Float?
+  lng                  Float?
+  type                 String
+  subtype              String?
+  statusTags           String?  
+  photos               String?  
+  videoUrls            String?
+  brochureUrl          String?
+  price                Float?
+  assignedSalespersons String? 
+  isLuxury             Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id])
+  leads                Lead[]
+}
+
+model Lead {
+  id                    String   @id @default(uuid())
+  organizationId        String
+  propertyId            String
+  userId                String?
+  source                String
+  status                String   @default("new")
+  assignedSalespersonId String?
+  comments              String?
+  scheduledVisitAt      DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  property              Property @relation(fields: [propertyId], references: [id])
+  organization          Organization @relation(fields: [organizationId], references: [id])
+}
+
+model PendingInvite {
+  code            String   @id
+  role            String
+  organizationId  String
+  propertyId      String?
+  status          String   @default("pending")
+  invitedByUserId String?
+  createdAt       DateTime @default(now())
+  acceptedAt      DateTime?
+}
+
+model Payment {
+  id                    String   @id @default(uuid())
+  organizationId        String
+  providerCustomerId    String?
+  plan                  String?
+  status                String?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  createdAt             DateTime @default(now())
+}
